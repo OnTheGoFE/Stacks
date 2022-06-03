@@ -8,6 +8,28 @@
 import UIKit
 import SnapKit
 
+class StackButton: UIButton {
+
+    var idGpo: Int
+    var idCat: Int
+    var idExp: Int
+
+    required init(g: Int = -1, c: Int = -1, e: Int = -1) {
+        // set myValue before super.init is called
+        self.idGpo = g
+        self.idCat = c
+        self.idExp = e
+
+        super.init(frame: .zero)
+
+    }
+
+    required init?(coder aDecoder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
+    }
+
+}
+
 class ViewController: UIViewController {
 
     var rootStacks: [GrupoStacks] = [GrupoStacks]()
@@ -83,10 +105,11 @@ class ViewController: UIViewController {
             titleStack.numberOfLines = 0
             titleStack.textAlignment = .left
             
-            let buttonStack = UIButton()
+            let buttonStack = StackButton()
             buttonStack.setImage(UIImage(named: "expand_more_FILL0_wght400_GRAD0_opsz48"), for: .normal)
             buttonStack.setTitle("Grupo:\(i)", for: .reserved)
             buttonStack.tag = 1
+            buttonStack.idGpo = i
             buttonStack.frame.size.width = 48
             buttonStack.frame.size.height = 48
             buttonStack.addTarget(self, action: #selector(self.toogleAction), for: .touchUpInside)
@@ -102,7 +125,6 @@ class ViewController: UIViewController {
             
             let grupoStack = GrupoStacks()
             grupoStack.stack = stack
-            grupoStack.isExpanded = false
             grupoStack.categorias = [CategoriasStacks]()
             
             root.addArrangedSubview(stack)
@@ -118,10 +140,12 @@ class ViewController: UIViewController {
                 titleStack.numberOfLines = 0
                 titleStack.textAlignment = .left
                 
-                let buttonStack = UIButton()
+                let buttonStack = StackButton()
                 buttonStack.setImage(UIImage(named: "expand_more_FILL0_wght400_GRAD0_opsz48"), for: .normal)
                 buttonStack.setTitle("Categoria:\(j)", for: .reserved)
-                buttonStack.tag = 1
+                buttonStack.tag = 0
+                buttonStack.idGpo = i
+                buttonStack.idCat = j
                 buttonStack.frame.size.width = 48
                 buttonStack.frame.size.height = 48
                 buttonStack.addTarget(self, action: #selector(self.toogleAction), for: .touchUpInside)
@@ -138,8 +162,6 @@ class ViewController: UIViewController {
                 
                 let categoriaStack = CategoriasStacks()
                 categoriaStack.stack = stack
-                categoriaStack.grupo = i
-                categoriaStack.isExpanded = false
                 categoriaStack.expedientes = [ExpedientesStacks]()
                 root.addArrangedSubview(stack)
                 
@@ -154,10 +176,13 @@ class ViewController: UIViewController {
                     titleStack.numberOfLines = 0
                     titleStack.textAlignment = .left
                     
-                    let buttonStack = UIButton()
+                    let buttonStack = StackButton()
                     buttonStack.setImage(UIImage(named: "expand_more_FILL0_wght400_GRAD0_opsz48"), for: .normal)
                     buttonStack.setTitle("Expediente:\(k)", for: .reserved)
-                    buttonStack.tag = 1
+                    buttonStack.tag = 0
+                    buttonStack.idGpo = i
+                    buttonStack.idCat = j
+                    buttonStack.idExp = k
                     buttonStack.frame.size.width = 48
                     buttonStack.frame.size.height = 48
                     buttonStack.addTarget(self, action: #selector(self.toogleAction), for: .touchUpInside)
@@ -174,12 +199,42 @@ class ViewController: UIViewController {
                     
                     let expedienteStack = ExpedientesStacks()
                     expedienteStack.stack = stack
-                    expedienteStack.categoria = j
-                    expedienteStack.isExpanded = false
-                    categoriaStack.expedientes.append(expedienteStack)
+                    
                     root.addArrangedSubview(stack)
                     
                     topEdge = stack.snp.bottom
+                    
+                    (0...1).forEach { file in
+                        
+                        // Setting labels
+                        let titleStack = UILabel()
+                        titleStack.text = "Hello World"
+                        titleStack.textColor = UIColor.black
+                        titleStack.numberOfLines = 0
+                        titleStack.textAlignment = .left
+                        
+                        let stack = UIStackView()
+                        stack.addArrangedSubview(titleStack)
+                        stack.axis = .horizontal
+                        stack.distribution = .equalSpacing
+                        stack.alignment = .leading
+                        stack.spacing = 0
+                        stack.backgroundColor = .orange
+                        stack.isHidden = true
+                        
+                        let itemStacks = ItemStacks()
+                        itemStacks.stack = stack
+                        
+                        expedienteStack.item = itemStacks
+                        
+                        root.addArrangedSubview(stack)
+                        
+                        topEdge = stack.snp.bottom
+                        
+                    }
+                    
+                    
+                    categoriaStack.expedientes.append(expedienteStack)
                     
                 }
                 
@@ -199,19 +254,13 @@ class ViewController: UIViewController {
             make.bottom.equalTo(topEdge)
         }
         
+        
+        
     }
 
     @objc func toogleAction(sender: UIButton){
         guard let title = sender.title(for: .reserved) else{ return }
-        let split = title.split(separator: ":")
-        let index = Int(split[1]) ?? 0
-        if title.contains("Expediente"){
-            
-        }else if title.contains("Categoria"){
-            
-        }else if title.contains("Grupo"){
-            shGrupo(sender: rootStacks[index])
-        }
+        
         if(sender.tag == 0){
             sender.setImage(UIImage(named: "expand_less_FILL0_wght400_GRAD0_opsz48"), for: .normal)
             sender.tag = 1
@@ -219,49 +268,68 @@ class ViewController: UIViewController {
             sender.setImage(UIImage(named: "expand_more_FILL0_wght400_GRAD0_opsz48"), for: .normal)
             sender.tag = 0
         }
-        
+        if title.contains("Expediente"){
+            shExpediente(sender: sender as! StackButton)
+        }else if title.contains("Categoria"){
+            shCategoria(sender: sender as! StackButton)
+        }else if title.contains("Grupo"){
+            shGrupo(sender: sender as! StackButton)
+        }
     }
     
-    func shGrupo(sender: GrupoStacks){
-        sender.isExpanded = !sender.isExpanded
-        if sender.isExpanded{
-            sender.categorias.forEach { categoria in
+    func shGrupo(sender: StackButton){
+        if sender.tag == 0{
+            rootStacks[sender.idGpo].categorias.forEach { categoria in
                 categoria.stack.isHidden = true
                 categoria.expedientes.forEach { expediente in
                     expediente.stack.isHidden = true
                 }
             }
         }else{
-            sender.categorias.forEach { categoria in
+            rootStacks[sender.idGpo].categorias.forEach { categoria in
                 categoria.stack.isHidden = false
                 categoria.expedientes.forEach { expediente in
                     expediente.stack.isHidden = false
                 }
             }
         }
-        
     }
     
-    func shCategoria(sender: Int){
-        
+    func shCategoria(sender: StackButton){
+        if sender.tag == 0{
+            rootStacks[sender.idGpo].categorias[sender.idCat].expedientes.forEach { expediente in
+                expediente.stack.isHidden = true
+            }
+        }else{
+            rootStacks[sender.idGpo].categorias[sender.idCat].expedientes.forEach { expediente in
+                expediente.stack.isHidden = false
+            }
+        }
+    }
+    
+    func shExpediente(sender: StackButton){
+        if sender.tag == 0{
+            rootStacks[sender.idGpo].categorias[sender.idCat].expedientes[sender.idExp].item.stack.isHidden = true
+        }else{
+            rootStacks[sender.idGpo].categorias[sender.idCat].expedientes[sender.idExp].item.stack.isHidden = false
+        }
     }
 
 }
 
 class GrupoStacks: NSObject{
-    var isExpanded: Bool!
     var stack: UIStackView!
     var categorias: [CategoriasStacks]!
 }
 class CategoriasStacks: NSObject{
-    var isExpanded: Bool!
     var stack: UIStackView!
-    var grupo: Int!
     var expedientes: [ExpedientesStacks]!
 }
 class ExpedientesStacks: NSObject{
-    var categoria: Int!
-    var isExpanded: Bool!
+    var stack: UIStackView!
+    var item: ItemStacks!
+}
+class ItemStacks: NSObject{
     var stack: UIStackView!
 }
 
